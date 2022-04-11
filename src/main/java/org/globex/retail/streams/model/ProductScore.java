@@ -22,18 +22,19 @@ public class ProductScore {
 
     public static ProductScore sum(ProductScore p1, ProductScore p2) {
         Builder builder = newBuilder(p1);
-        builder.score(p1.getScore() + p2.getScore());
+        builder.category(p1.getCategory()).score(p1.getScore() + p2.getScore());
         return builder.build();
     }
 
     public static Builder newBuilder(ProductScore productLikes) {
         return new Builder(productLikes.getProductId())
+                .category(productLikes.getCategory())
                 .score(productLikes.getScore());
     }
 
     public static class Builder {
 
-        private ProductScore productScore;
+        private final ProductScore productScore;
 
         public Builder(String productId) {
             productScore = new ProductScore();
@@ -44,6 +45,11 @@ public class ProductScore {
 
         public Builder score(int score) {
             productScore.score = score;
+            return this;
+        }
+
+        public Builder category(String category) {
+            productScore.category = category;
             return this;
         }
 

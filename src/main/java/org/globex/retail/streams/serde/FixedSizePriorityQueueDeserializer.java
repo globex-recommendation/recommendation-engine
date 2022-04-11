@@ -14,7 +14,7 @@ import org.globex.retail.streams.model.ProductScore;
 
 public class FixedSizePriorityQueueDeserializer extends StdDeserializer<FixedSizePriorityQueue<ProductScore>> {
 
-    private Comparator<ProductScore> comparator;
+    private final Comparator<ProductScore> comparator;
 
     int maxSize;
 
@@ -38,7 +38,8 @@ public class FixedSizePriorityQueueDeserializer extends StdDeserializer<FixedSiz
             JsonNode node = i.next();
             String productId = node.get("productId").asText();
             int likes = node.get("score").asInt();
-            ProductScore productLikes = new ProductScore.Builder(productId).score(likes).build();
+            String category = node.get("category").asText();
+            ProductScore productLikes = new ProductScore.Builder(productId).category(category).score(likes).build();
             queue.add(productLikes);
         }
         return queue;
