@@ -1,9 +1,5 @@
 package org.globex.retail.streams;
 
-import java.util.Comparator;
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Produces;
-
 import io.quarkus.kafka.client.serialization.ObjectMapperSerde;
 import io.vertx.core.json.JsonObject;
 import org.apache.kafka.common.serialization.Serdes;
@@ -23,6 +19,9 @@ import org.globex.retail.streams.serde.FixedSizePriorityQueueSerde;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Produces;
+
 @SuppressWarnings("rawtypes")
 @ApplicationScoped
 public class TopologyProducer {
@@ -41,12 +40,8 @@ public class TopologyProducer {
     @Produces
     public Topology buildTopology() {
 
-        Comparator<ProductScore> comparator = (pl1, pl2) -> pl2.getScore() - pl1.getScore();
-
         final ObjectMapperSerde<ProductScore> productLikesSerde = new ObjectMapperSerde<>(ProductScore.class);
-        final FixedSizePriorityQueueSerde fixedSizePriorityQueueSerde = new FixedSizePriorityQueueSerde(comparator, aggregationSize);
-
-        FixedSizePriorityQueue<ProductScore> fixedQueue = new FixedSizePriorityQueue<>(comparator, aggregationSize);
+        final FixedSizePriorityQueueSerde fixedSizePriorityQueueSerde = new FixedSizePriorityQueueSerde(ProductScore.SCORE_ORDER, aggregationSize);
 
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -60,7 +55,7 @@ public class TopologyProducer {
                         .reduce(ProductScore::sum);
 
         productLikes.groupBy((key, value) -> KeyValue.pair(value.getCategory(), value), Grouped.with(Serdes.String(), productLikesSerde))
-                .aggregate(() -> new FixedSizePriorityQueue<>(comparator, aggregationSize),
+                .aggregate(() -> new FixedSizePriorityQueue<>(ProductScore.SCORE_ORDER, aggregationSize),
                         (key, value, aggregate) -> aggregate.add(value),
                         (key, value, aggregate) -> aggregate.remove(value),
                         Materialized.<String, FixedSizePriorityQueue, KeyValueStore<Bytes, byte[]>>as(aggregationStore).withKeySerde(Serdes.String()).withValueSerde(fixedSizePriorityQueueSerde));
