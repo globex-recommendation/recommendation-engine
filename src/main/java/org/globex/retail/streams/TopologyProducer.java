@@ -7,10 +7,7 @@ import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.Grouped;
-import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.globex.retail.streams.collectors.FixedSizePriorityQueue;
@@ -47,11 +44,10 @@ public class TopologyProducer {
 
         KTable<String, ProductScore> productLikes =
                 builder.stream(trackingEventTopic, Consumed.with(Serdes.String(), Serdes.String()))
-                        .mapValues(value -> {
-                            JsonObject activity = new JsonObject(value);
-                            String productId = activity.getJsonObject("actionInfo").getString("productId");
-                            return new ProductScore.Builder(productId).build();
-                        }).groupBy((key, value) -> value.getProductId(), Grouped.with(Serdes.String(), productLikesSerde))
+                        .mapValues(JsonObject::new)
+                        .filter((key, value) -> value.getJsonObject("actionInfo") != null && value.getJsonObject("actionInfo").getString("productId") != null)
+                        .mapValues(value -> new ProductScore.Builder(value.getJsonObject("actionInfo").getString("productId")).build())
+                        .groupBy((key, value) -> value.getProductId(), Grouped.with(Serdes.String(), productLikesSerde))
                         .reduce(ProductScore::sum);
 
         productLikes.groupBy((key, value) -> KeyValue.pair(value.getCategory(), value), Grouped.with(Serdes.String(), productLikesSerde))
